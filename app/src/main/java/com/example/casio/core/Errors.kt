@@ -163,8 +163,24 @@ object Errors {
         report(expression, e.message ?: "未知错误")
 
     /**
+     * 界面统一的错误展示。**不**把 ▸◂ 拼进算式 —— 那会让用户以为式子里混进了乱码
+     * (实测反馈:积分式末尾看起来多出 ">0<",实际是 =▸0◂)。
+     * 位置改用下方一行的 ^ 指出,与真机一致。
+     */
+    fun display(rep: Report): String = buildString {
+        append("${rep.kind.label}  ${rep.message}")
+        append("\n")
+        append(rep.expression)
+        val p = rep.pointer()
+        if (p.isNotEmpty()) append("\n").append(p)
+        append("\n\n").append(rep.kind.hint)
+    }
+
+    /**
      * 把出错位置画进式子:用一对中括号标出该字符。
      * 界面宽度有限,竖排 ^ 可能对不齐,所以额外提供这种"就地标记"形式。
+     *
+     * 注意:界面上**不再**使用它(见 [display]),仅保留给需要强调字符的场合与自测。
      */
     fun markInline(expression: String, position: Int): String {
         if (position < 0 || position >= expression.length) return expression

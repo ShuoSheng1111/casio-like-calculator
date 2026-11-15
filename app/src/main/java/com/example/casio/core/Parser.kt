@@ -294,7 +294,7 @@ private class ParseState(private val tokens: List<Token>) {
 
     fun parseAll(): Node {
         val node = parseExpression()
-        if (pos != tokens.size) throw ParseError("算式结尾有多余内容: ${tokens[pos]}")
+        if (pos != tokens.size) throw ParseError("算式结尾有多余内容: ${tokens[pos].human()}")
         return node
     }
 

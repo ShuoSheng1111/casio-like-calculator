@@ -251,6 +251,24 @@ object EngineSelfTest {
             checkTrue(":int 用方括号显示空位", out.contains("[0]") && out.contains("[1]"), out)
         }
         run {
+            // ★ 用户报的用例:x^2 从 5 到 100。理论值 (100^3-5^3)/3 = 333291.6667
+            val want = (100.0 * 100.0 * 100.0 - 5.0 * 5.0 * 5.0) / 3.0
+            val got = Calculus.integrateValue("5", "100", "x^2", emptyMap())
+            checkTrue("∫5..100 x^2 数值正确", abs(got - want) < 1e-3, "got=$got want=$want")
+            val eBig = CalcEngine()
+            val outBig = eBig.process(":int 5 100 x^2")
+            checkTrue(":int 5 100 x^2 给出 333291", outBig.contains("333291"), outBig)
+            // 新键盘按 ^ 会带出左括号,^(2) 写法必须与 ^2 等价
+            val outParen = eBig.process(":int 5 100 x^(2)")
+            checkTrue(":int 5 100 x^(2) 等价", outParen.contains("333291"), outParen)
+            // 正常结果里不能混入错误定位标记(用户看到的「多余内容」)
+            checkTrue(
+                ":int 结果不含错误标记",
+                !outBig.contains("\u25B8") && !outBig.contains("\u25C2"),
+                outBig
+            )
+        }
+        run {
             // 逗号同样可以作为参数分隔符(按键区有逗号键,方便在手机上输入)
             val e = CalcEngine()
             val out = e.process(":int 0,1,x^2")
@@ -1920,6 +1938,33 @@ object EngineSelfTest {
             check("就地标记", Errors.markInline("1+;3", 2), "1+▸;◂3")
             // 越界时原样返回
             check("越界不改动", Errors.markInline("1+2", 99), "1+2")
+        }
+        run {
+            // ★ 界面展示不得把 ▸◂ 拼进算式。
+            // 实测反馈:积分式末尾看起来多出 ">0<",其实是 ":int 5 100 x^2=▸0◂"。
+            val bad = ":int 5 100 x^2=0"
+            val rep = Errors.report(bad, "未知名称: 0")
+            val disp = Errors.display(rep)
+            checkTrue("错误展示不含 ▸◂", !disp.contains("\u25B8") && !disp.contains("\u25C2"), disp)
+            // 算式原文必须完整保留
+            checkTrue("错误展示保留原式", disp.contains(":int 5 100 x^2=0"), disp)
+            // 位置仍由下一行的 ^ 指出
+            checkTrue("错误展示仍带 ^ 指示", disp.contains("^"), disp)
+        }
+        run {
+            // ★ 错误信息不能把内部调试串抛给用户。
+            // 实测反馈:用户看到 "算式结尾有多余内容: Op(text==)" 一头雾水。
+            var msg = ""
+            try {
+                Parser.parse("1+2=0")
+            } catch (e: Exception) {
+                msg = e.message ?: ""
+            }
+            checkTrue("多余内容提示可读", msg.contains("多余") && msg.contains("="), msg)
+            checkTrue("不含 Op(text==) 调试串", !msg.contains("Op(") && !msg.contains("text=="), msg)
+            // 报错时位置仍能定位到末尾字符
+            val badRep = Errors.report("1+2=0", msg)
+            check("多余内容定位到末尾", badRep.position.toString(), "4")
         }
         run {
             // 全角字符的列宽按 2 计,保证 ^ 对得齐

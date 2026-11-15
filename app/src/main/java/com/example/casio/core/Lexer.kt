@@ -16,6 +16,18 @@ sealed class Token {
         is Name -> "Name($text)"
         is Op -> "Op($text)"
     }
+
+    /**
+     * 给人看的形态。错误信息里不能泄露 `Op(text==)` 这种调试串
+     * (实测:用户看到 "算式结尾有多余内容: Op(text==)" 完全看不懂)。
+     */
+    fun human(): String = when (this) {
+        is Num ->
+            if (value == Math.floor(value) && Math.abs(value) < 1e15) value.toLong().toString()
+            else value.toString()
+        is Name -> "“$text”"
+        is Op -> "“$text”"
+    }
 }
 
 class ParseError(message: String) : Exception(message)

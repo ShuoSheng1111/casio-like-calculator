@@ -337,14 +337,7 @@ fun CalculatorScreen() {
         ) {
             val msg = raw.removePrefix("错误:").removePrefix("错误:").trim()
             val rep = Errors.report(line, msg)
-            buildString {
-                append("${rep.kind.label}  ${rep.message}\n")
-                append(Errors.markInline(line, rep.position))
-                append("\n")
-                val ptr = rep.pointer()
-                if (ptr.isNotEmpty()) append(ptr).append("\n")
-                append("\n").append(rep.kind.hint)
-            }
+            Errors.display(rep)
         } else {
             raw
         }
